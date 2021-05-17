@@ -17,9 +17,9 @@ r11_in = 0
 # nlr11 = my_file.readline()  # number of lines
 
 #allocate
-# r11ex = np.empty((nlr11,3))
+# data = np.empty((nlr11,3))
 
-r11ex = np.loadtxt('profile.in',
+data = np.loadtxt('profile.in',
                     skiprows=1,
                     delimiter=' ')
 
@@ -66,14 +66,14 @@ def xy2tetha(x,y):
     theta = theta % (2*np.pi)
     return theta
 
-r = r11ex[:,0]
-theta = r11ex[:,1]
-vel_z = r11ex[:,2]
+r = data[:,0]
+theta = data[:,1]
+vel_z = data[:,2]
 vel_z_from_func = np.empty(len(vel_z))
 
 start_time = time.time()
-for i in range(len(r11ex)):
-    vel_z_from_func[i] = find_closest(r11ex,r[i],theta[i])
+for i in range(len(data)):
+    vel_z_from_func[i] = find_closest(data,r[i],theta[i])
 print("--- %s seconds ---" % (time.time() - start_time))
 
 # vel_z_error = vel_z - vel_z_from_func
@@ -99,11 +99,13 @@ THETA = xy2tetha(X_c, Y_c)
 Z = np.empty((len(space_centroid),len(space_centroid)))
 for i in range(len(space_centroid)):
     for j in range(len(space_centroid)):
-        Z[i,j] = find_closest(r11ex,R[i,j],THETA[i,j])
+        Z[i,j] = find_closest(data,R[i,j],THETA[i,j])
 
-circle = plt.Circle((0, 0), 0.33, color='k', fill=False, lw=2)
+circle = plt.Circle((0, 0), 0.33, color='white', fill=False, lw=3)
 fig, ax = plt.subplots(figsize=(7,6))
 c = ax.pcolor(X, Y, Z,
-            cmap='jet')
+            cmap='jet',
+            edgecolors='k',
+            linewidths=1)
 ax.add_patch(circle)
 fig.colorbar(c)
