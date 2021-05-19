@@ -28,17 +28,11 @@ grid = griddata(points, vel_z,
                 method='linear',
                 fill_value=0)
 
-fig, ax = plt.subplots()
-ax.pcolor(grid.T)
-# plt.show()
-
-
-# circle = plt.Circle((0, 0), 0.33, color='white', fill=False, lw=3)
-# fig, ax = plt.subplots(figsize=(7,6))
-# c = ax.pcolor(X_c, Y_c, grid,
-#             cmap='jet',
-#             edgecolors='k',
-#             linewidths=1)
-# ax.add_patch(circle)
-# fig.colorbar(c)
-# fig.show()
+circle = plt.Circle((0, 0), 0.33, color='white', fill=False, lw=3)
+fig, ax = plt.subplots(figsize=(7,6))
+c = ax.pcolor(X_c, Y_c, -grid,
+            cmap='jet',
+            edgecolors='k',
+            linewidths=1)
+ax.add_patch(circle)
+fig.colorbar(c)
