@@ -150,11 +150,23 @@ def interpolate_value(x, y, vertices, vertices_connect):
         )
 
         return value
-    
+
     return 0
 
 
-value = interpolate_value(0.5, -0.2, vertices, vertices_connect)
-print(value)
+# value = interpolate_value(0.5, -0.2, vertices, vertices_connect)
+# print(value)
 
 # Define funciton to create MFSim-like grid
+space = np.arange(-0.5,0.5001,0.025)
+X,Y = np.meshgrid(space, space)
+
+space_centroid = np.empty(len(space)-1)
+for i in range(1,len(space)):
+    space_centroid[i-1] = space[i-1] + (space[i]-space[i-1])/2
+X_c,Y_c = np.meshgrid(space_centroid, space_centroid)
+
+Z = np.empty((len(space_centroid),len(space_centroid)))
+for i in range(len(space_centroid)):
+    for j in range(len(space_centroid)):
+        Z[i,j] = interpolate_value(X_c[i,j], Y_c[i,j], vertices, vertices_connect)
