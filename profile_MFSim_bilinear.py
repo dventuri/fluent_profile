@@ -50,17 +50,19 @@ def find_cell(point,vertices,vertices_connect):
 
 
 # Define function to find value at (x,y)
-def calc_alpha_beta(vertex_1, vertex_2, vertex_3, vertex_4, centroid):
+def calc_alpha_beta(vertex_1, vertex_2, vertex_3, vertex_4, point):
 
     a = -vertex_1[0] + vertex_3[0]
     b = -vertex_1[0] + vertex_2[0]
     c = vertex_1[0] - vertex_2[0] - vertex_3[0] + vertex_4[0]
-    d = centroid[0] - vertex_1[0]
+    d = point.x - vertex_1[0]
 
     e = -vertex_1[1] + vertex_3[1]
     f = -vertex_1[1] + vertex_2[1]
     g = vertex_1[1] - vertex_2[1] - vertex_3[1] + vertex_4[1]
-    h = centroid[1] - vertex_1[1]
+    h = point.y - vertex_1[1]
+
+    soeq_a = 
 
     def alpha_1(a,b,c,d,e,f,g,h):
         alpha = -(b*e - a*f + d*g -c*h + np.sqrt(
@@ -128,15 +130,13 @@ def interpolate_value(x, y, vertices, vertices_connect):
 
     if(n_cell):
 
+        print(n_cell)
+
         vertex = cell.exterior.coords
-        v1 = vertex[0]
-        v2 = vertex[1]
-        v3 = vertex[2]
-        v4 = vertex[3]
 
-        centroid = cell.centroid.coords[0]
-
-        alpha, beta = calc_alpha_beta(v1, v2, v3, v4, centroid)
+        alpha, beta = calc_alpha_beta(vertex[0], vertex[1],
+                                      vertex[2], vertex[3],
+                                      point)
 
         p1 = vel_z[vertices_connect[n_cell,0]]
         p2 = vel_z[vertices_connect[n_cell,1]]
@@ -168,5 +168,9 @@ X_c,Y_c = np.meshgrid(space_centroid, space_centroid)
 
 Z = np.empty((len(space_centroid),len(space_centroid)))
 for i in range(len(space_centroid)):
+    print(i)
     for j in range(len(space_centroid)):
+        print(j)
+        print(X_c[i,j])
+        print(Y_c[i,j])
         Z[i,j] = interpolate_value(X_c[i,j], Y_c[i,j], vertices, vertices_connect)
