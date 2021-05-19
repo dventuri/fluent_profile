@@ -50,6 +50,76 @@ def find_cell(point,vertices,vertices_connect):
 
 
 # Define function to find value at (x,y)
+def calc_alpha_beta(vertex_1, vertex_2, vertex_3, vertex_4, centroid):
+
+    a = -vertex_1[0] + vertex_3[0]
+    b = -vertex_1[0] + vertex_2[0]
+    c = vertex_1[0] - vertex_2[0] - vertex_3[0] + vertex_4[0]
+    d = centroid[0] - vertex_1[0]
+
+    e = -vertex_1[1] + vertex_3[1]
+    f = -vertex_1[1] + vertex_2[1]
+    g = vertex_1[1] - vertex_2[1] - vertex_3[1] + vertex_4[1]
+    h = centroid[1] - vertex_1[1]
+
+    def alpha_1(a,b,c,d,e,f,g,h):
+        alpha = -(b*e - a*f + d*g -c*h + np.sqrt(
+            -4*(c*e - a*g)*(d*f - b*h) + (
+                b*e - a*f + d*g - c*h
+            )**2
+        ))/(2*c*e - 2*a*g)
+        return alpha
+
+    def beta_1(a,b,c,d,e,f,g,h):
+        beta = (b*e - a*f - d*g + c*h + np.sqrt(
+            -4*(c*e - a*g)*(d*f - b*h) + (
+                b*e - a*f + d*g - c*h
+            )**2
+        ))/(2*c*f - 2*b*g)
+        return beta
+
+    def alpha_2(a,b,c,d,e,f,g,h):
+        alpha = (-b*e + a*f - d*g + c*h + np.sqrt(
+            -4*(c*e - a*g)*(d*f - b*h) + (
+                b*e - a*f + d*g - c*h
+            )**2
+        ))/(2*c*e - 2*a*g)
+        return alpha
+
+    def beta_2(a,b,c,d,e,f,g,h):
+        beta = -((-b*e + a*f + d*g - c*h + np.sqrt(
+            -4*(c*e - a*g)*(d*f - b*h) + (
+                b*e - a*f + d*g - c*h
+            )**2
+        ))/(2*c*f - 2*b*g))
+        return beta
+
+    def calc_alpha_beta_1(a,b,c,d,e,f,g,h):
+        alpha = alpha_1(a,b,c,d,e,f,g,h)
+        if(alpha >= 0 and alpha <= 1):
+            beta = beta_1(a,b,c,d,e,f,g,h)
+            if(beta >= 0 or beta <= 1):
+                return (alpha, beta)
+        return None
+
+    def calc_alpha_beta_2(a,b,c,d,e,f,g,h):
+        alpha = alpha_2(a,b,c,d,e,f,g,h)
+        if(alpha >= 0 and alpha <= 1):
+            beta = beta_2(a,b,c,d,e,f,g,h)
+            if(beta >= 0 or beta <= 1):
+                return (alpha, beta)
+        return None
+
+    coeff = calc_alpha_beta_1(a,b,c,d,e,f,g,h)
+    if(coeff):
+        return coeff
+    else:
+        coeff = calc_alpha_beta_2(a,b,c,d,e,f,g,h)
+        if(coeff):
+            return coeff
+        else:
+            return None
+
 def interpolate_value(x, y, vertices, vertices_connect):
 
     point = Point(x, y)
@@ -58,57 +128,14 @@ def interpolate_value(x, y, vertices, vertices_connect):
     print(n_cell)
 
     vertex = cell.exterior.coords
-    # vertex = vertices
-    center = cell.centroid.coords[0]
+    v1 = vertex[0]
+    v2 = vertex[1]
+    v3 = vertex[2]
+    v4 = vertex[3]
 
-    a = -vertex[0][0] + vertex[2][0]
-    b = -vertex[0][0] + vertex[1][0]
-    c = vertex[0][0] - vertex[1][0] - vertex[2][0] + vertex[3][0]
-    d = center[0] - vertex[0][0]
-    e = -vertex[0][1] + vertex[2][1]
-    f = -vertex[0][1] + vertex[1][1]
-    g = vertex[0][1] - vertex[1][1] - vertex[2][1] + vertex[3][1]
-    h = center[1] - vertex[0][1]
+    centroid = cell.centroid.coords[0]
 
-    alpha = -(b*e - a*f + d*g -c*h + np.sqrt(
-        -4*(c*e - a*g)*(d*f - b*h) + (
-            b*e - a*f + d*g - c*h
-        )**2
-    ))/(2*c*e - 2*a*g)
-
-    if(alpha >= 0 or alpha <= 1):
-        beta = (b*e - a*f - d*g + c*h + np.sqrt(
-            -4*(c*e - a*g)*(d*f - b*h) + (
-                b*e - a*f + d*g - c*h
-            )**2
-        ))/(2*c*f - 2*b*g)
-
-        if(beta >= 0 or beta <= 1):
-            pass
-        else:
-            return -1
-
-    else:
-        alpha = (-b*e + a*f - d*g + c*h + np.sqrt(
-            -4*(c*e - a*g)*(d*f - b*h) + (
-                b*e - a*f + d*g - c*h
-            )**2
-        ))/(2*c*e - 2*a*g)
-
-        if(alpha >= 0 or alpha <= 1):
-            beta = -((-b*e + a*f + d*g - c*h + np.sqrt(
-                -4*(c*e - a*g)*(d*f - b*h) + (
-                    b*e - a*f + d*g - c*h
-                )**2
-            ))/(2*c*f - 2*b*g))
-
-            if(beta >= 0 or beta <= 1):
-                pass
-            else:
-                return -1
-        
-        else:
-            return -1
+    alpha, beta = calc_alpha_beta(v1, v2, v3, v4, centroid)
 
     p1 = vel_z[vertices_connect[n_cell,0]]
     p2 = vel_z[vertices_connect[n_cell,1]]
