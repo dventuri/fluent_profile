@@ -46,7 +46,7 @@ def find_cell(point,vertices,vertices_connect):
         if current_cell.contains(point):
             return n, current_cell
 
-    return 0, Polygon()
+    return None, Polygon()
 
 
 # Define function to find value at (x,y)
@@ -125,7 +125,6 @@ def interpolate_value(x, y, vertices, vertices_connect):
     point = Point(x, y)
 
     n_cell, cell = find_cell(point, vertices, vertices_connect)
-    print(n_cell)
 
     if(n_cell):
 
@@ -155,7 +154,7 @@ def interpolate_value(x, y, vertices, vertices_connect):
     return 0
 
 
-value = interpolate_value(0.23, -0.2, vertices, vertices_connect)
+value = interpolate_value(0.5, -0.2, vertices, vertices_connect)
 print(value)
 
 # Define funciton to create MFSim-like grid
