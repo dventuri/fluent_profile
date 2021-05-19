@@ -46,7 +46,7 @@ def find_cell(point,vertices,vertices_connect):
         if current_cell.contains(point):
             return n, current_cell
 
-    return -1
+    return 0, Polygon()
 
 
 # Define function to find value at (x,y)
@@ -127,28 +127,33 @@ def interpolate_value(x, y, vertices, vertices_connect):
     n_cell, cell = find_cell(point, vertices, vertices_connect)
     print(n_cell)
 
-    vertex = cell.exterior.coords
-    v1 = vertex[0]
-    v2 = vertex[1]
-    v3 = vertex[2]
-    v4 = vertex[3]
+    if(not n_cell):
 
-    centroid = cell.centroid.coords[0]
+        vertex = cell.exterior.coords
+        v1 = vertex[0]
+        v2 = vertex[1]
+        v3 = vertex[2]
+        v4 = vertex[3]
 
-    alpha, beta = calc_alpha_beta(v1, v2, v3, v4, centroid)
+        centroid = cell.centroid.coords[0]
 
-    p1 = vel_z[vertices_connect[n_cell,0]]
-    p2 = vel_z[vertices_connect[n_cell,1]]
-    p3 = vel_z[vertices_connect[n_cell,2]]
-    p4 = vel_z[vertices_connect[n_cell,3]]
+        alpha, beta = calc_alpha_beta(v1, v2, v3, v4, centroid)
 
-    value = (1 - alpha)*(
-        (1 - beta)*p1 + beta*p2
-    ) + alpha*(
-        (1 - beta)*p3 + beta*p4
-    )
+        p1 = vel_z[vertices_connect[n_cell,0]]
+        p2 = vel_z[vertices_connect[n_cell,1]]
+        p3 = vel_z[vertices_connect[n_cell,2]]
+        p4 = vel_z[vertices_connect[n_cell,3]]
 
-    return value
+        value = (1 - alpha)*(
+            (1 - beta)*p1 + beta*p2
+        ) + alpha*(
+            (1 - beta)*p3 + beta*p4
+        )
+
+        return value
+    
+    return 0
+
 
 value = interpolate_value(0.23, -0.2, vertices, vertices_connect)
 print(value)
