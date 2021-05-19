@@ -127,7 +127,7 @@ def interpolate_value(x, y, vertices, vertices_connect):
     n_cell, cell = find_cell(point, vertices, vertices_connect)
     print(n_cell)
 
-    if(not n_cell):
+    if(n_cell):
 
         vertex = cell.exterior.coords
         v1 = vertex[0]
