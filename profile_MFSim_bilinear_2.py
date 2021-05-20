@@ -1,7 +1,7 @@
-# From https://stackoverflow.com/a/23921432/3980223
-# Bilinear interpolation for any convex tetragon
+# From https://www.particleincell.com/2012/quad-interpolation
 
 import numpy as np
+import matplotlib.pyplot as plt
 from shapely.geometry import Point
 from shapely.geometry.polygon import Polygon
 
@@ -27,6 +27,23 @@ vertices_connect = np.loadtxt('profile.axdt',
                                 dtype=int,
                                 delimiter=',',
                                 skiprows=1084)
+
+
+
+# %create our polygon
+# px = [-1, 8, 13, -4];
+# py = [-1, 3, 11, 8];
+
+# %compute coefficients
+# A=[1 0 0 0;1 1 0 0;1 1 1 1;1 0 1 0];
+# AI = inv(A);
+# a = AI*px';
+# b = AI*py';
+
+
+
+
+
 
 
 # Define function for finding the cell that contains a given point
@@ -62,7 +79,7 @@ def calc_alpha_beta(vertex_1, vertex_2, vertex_3, vertex_4, point):
     g = vertex_1[1] - vertex_2[1] - vertex_3[1] + vertex_4[1]
     h = point.y - vertex_1[1]
 
-    # soeq_a = 
+    # soeq_a =
 
     def alpha_1(a,b,c,d,e,f,g,h):
         alpha = -(b*e - a*f + d*g -c*h + np.sqrt(
@@ -130,23 +147,43 @@ def interpolate_value(x, y, vertices, vertices_connect):
 
     if(n_cell):
 
-        print(n_cell)
+        vertices_x = np.empty(4)
+        vertices_y = np.empty(4)
+        vertices_coord = cell.exterior.coords
+        for i in range(4):
+            vertices_x[i] = vertices_coord[i][0]
+            vertices_y[i] = vertices_coord[i][1]
 
-        vertex = cell.exterior.coords
+        A = np.array([[1, 0, 0, 0],
+                      [1, 1, 0, 0],
+                      [1, 1, 1, 1],
+                      [1, 0, 1, 0]])
+        AI = np.linalg.inv(A)
 
-        alpha, beta = calc_alpha_beta(vertex[0], vertex[1],
-                                      vertex[2], vertex[3],
-                                      point)
+        a = AI.dot(vertices_x)
+        b = AI.dot(vertices_y)
+
+        # quadratic equation coeffs, aa*mm^2+bb*m+cc=0
+        aa = a[3]*b[2] - a[2]*b[3]
+        bb = a[3]*b[0] - a[0]*b[3] + a[1]*b[2] - a[2]*b[1] + point.x*b[3] - point.y*a[3]
+        cc = a[1]*b[0] - a[0]*b[1] + point.x*b[1] - point.y*a[1]
+
+        # compute m = (-b+sqrt(b^2-4ac))/(2a)
+        det = np.sqrt(bb*bb - 4*aa*cc)
+        m = (-bb - det)/(2*aa)
+
+        # compute l
+        l = (point.x - a[0] - a[2]*m)/(a[1] + a[3]*m)
 
         p1 = vel_z[vertices_connect[n_cell,0]]
         p2 = vel_z[vertices_connect[n_cell,1]]
         p3 = vel_z[vertices_connect[n_cell,2]]
         p4 = vel_z[vertices_connect[n_cell,3]]
 
-        value = (1 - alpha)*(
-            (1 - beta)*p1 + beta*p2
-        ) + alpha*(
-            (1 - beta)*p3 + beta*p4
+        value = (1 - m)*(
+            (1 - l)*p1 + l*p2
+        ) + m*(
+            l*p3 + (1-l)*p4
         )
 
         return value
@@ -158,7 +195,8 @@ def interpolate_value(x, y, vertices, vertices_connect):
 # print(value)
 
 # Define funciton to create MFSim-like grid
-space = np.arange(-0.5,0.5001,0.025)
+# space = np.arange(-0.5,0.5001,0.025)
+space = np.arange(-0.5,0.5001,0.003125)
 X,Y = np.meshgrid(space, space)
 
 space_centroid = np.empty(len(space)-1)
@@ -168,9 +206,14 @@ X_c,Y_c = np.meshgrid(space_centroid, space_centroid)
 
 Z = np.empty((len(space_centroid),len(space_centroid)))
 for i in range(len(space_centroid)):
-    print(i)
     for j in range(len(space_centroid)):
-        print(j)
-        print(X_c[i,j])
-        print(Y_c[i,j])
         Z[i,j] = interpolate_value(X_c[i,j], Y_c[i,j], vertices, vertices_connect)
+
+circle = plt.Circle((0, 0), 0.33, color='white', fill=False, lw=3)
+fig, ax = plt.subplots(figsize=(7,6))
+c = ax.pcolor(X_c, Y_c, -Z,
+            cmap='jet',
+            edgecolors='k',
+            linewidths=1)
+ax.add_patch(circle)
+fig.colorbar(c)
