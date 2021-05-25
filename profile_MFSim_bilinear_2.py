@@ -6,48 +6,32 @@ from shapely.geometry import Point
 from shapely.geometry.polygon import Polygon
 
 
-# First of all, read CFD-Post data as x and y - no need for r and theta
-# Also, these data is on vertices and has connectivity info
-# Fluent raw data is on centroids but has no connec. info
+def read_cfdpost_data(filename, rows):
+    # Read CFD-Post vertex data as x and y points with connectivity info
+    # Fluent raw data is at centroids but has no connectivity info
 
-vertices = np.loadtxt('profile.axdt',
-                        delimiter=',',
-                        skiprows=2,
-                        max_rows=1080,
-                        usecols=(0,1))
-vertices[:,0] -= 3.464  # center x values at 0
+    vertices = np.loadtxt(filename,
+                          delimiter=',',
+                          skiprows=2,
+                          max_rows=rows,
+                          usecols=(0,1))
 
-vel_z = np.loadtxt('profile.axdt',
-                    delimiter=',',
-                    skiprows=2,
-                    max_rows=1080,
-                    usecols=3)
+    vel_z = np.loadtxt(filename,
+                       delimiter=',',
+                       skiprows=2,
+                       max_rows=1080,
+                       usecols=3)
 
-vertices_connect = np.loadtxt('profile.axdt',
-                                dtype=int,
-                                delimiter=',',
-                                skiprows=1084)
+    vertices_connect = np.loadtxt(filename,
+                                  dtype=int,
+                                  delimiter=',',
+                                  skiprows=rows+4)
 
-
-
-# %create our polygon
-# px = [-1, 8, 13, -4];
-# py = [-1, 3, 11, 8];
-
-# %compute coefficients
-# A=[1 0 0 0;1 1 0 0;1 1 1 1;1 0 1 0];
-# AI = inv(A);
-# a = AI*px';
-# b = AI*py';
+    return vertices, vertices_connect, vel_z
 
 
-
-
-
-
-
-# Define function for finding the cell that contains a given point
 def find_cell(point,vertices,vertices_connect):
+    # Find the cell that contains a given point
 
     for n in range(len(vertices_connect)):
 
@@ -66,80 +50,43 @@ def find_cell(point,vertices,vertices_connect):
     return None, Polygon()
 
 
-# Define function to find value at (x,y)
-def calc_alpha_beta(vertex_1, vertex_2, vertex_3, vertex_4, point):
+def calc_normalized_coord(cell, point):
+    # calculate normalized coordinates (rectangular coordinates 0-1)
 
-    a = -vertex_1[0] + vertex_3[0]
-    b = -vertex_1[0] + vertex_2[0]
-    c = vertex_1[0] - vertex_2[0] - vertex_3[0] + vertex_4[0]
-    d = point.x - vertex_1[0]
+    vertices_x = np.empty(4)
+    vertices_y = np.empty(4)
+    vertices_coord = cell.exterior.coords
+    for i in range(4):
+        vertices_x[i] = vertices_coord[i][0]
+        vertices_y[i] = vertices_coord[i][1]
 
-    e = -vertex_1[1] + vertex_3[1]
-    f = -vertex_1[1] + vertex_2[1]
-    g = vertex_1[1] - vertex_2[1] - vertex_3[1] + vertex_4[1]
-    h = point.y - vertex_1[1]
+    AI = np.array([[ 1, 0, 0, 0],
+                    [-1, 1, 0, 0],
+                    [-1, 0, 0, 1],
+                    [ 1,-1, 1,-1]])
 
-    # soeq_a =
+    a = np.dot(AI,vertices_x)
+    b = np.dot(AI,vertices_y)
 
-    def alpha_1(a,b,c,d,e,f,g,h):
-        alpha = -(b*e - a*f + d*g -c*h + np.sqrt(
-            -4*(c*e - a*g)*(d*f - b*h) + (
-                b*e - a*f + d*g - c*h
-            )**2
-        ))/(2*c*e - 2*a*g)
-        return alpha
+    # quadratic equation coeffs, aa*mm^2+bb*m+cc=0
+    aa = a[3]*b[2] - a[2]*b[3]
+    bb = a[3]*b[0] - a[0]*b[3] + a[1]*b[2] - a[2]*b[1] + point.x*b[3] - point.y*a[3]
+    cc = a[1]*b[0] - a[0]*b[1] + point.x*b[1] - point.y*a[1]
 
-    def beta_1(a,b,c,d,e,f,g,h):
-        beta = (b*e - a*f - d*g + c*h + np.sqrt(
-            -4*(c*e - a*g)*(d*f - b*h) + (
-                b*e - a*f + d*g - c*h
-            )**2
-        ))/(2*c*f - 2*b*g)
-        return beta
+    # compute m = (-b+sqrt(b^2-4ac))/(2a)
+    det = np.sqrt(bb*bb - 4*aa*cc)
+    m = (-bb - det)/(2*aa)
+    if(not 0 <= m <= 1):
+        m = (-bb + det)/(2*aa)
 
-    def alpha_2(a,b,c,d,e,f,g,h):
-        alpha = (-b*e + a*f - d*g + c*h + np.sqrt(
-            -4*(c*e - a*g)*(d*f - b*h) + (
-                b*e - a*f + d*g - c*h
-            )**2
-        ))/(2*c*e - 2*a*g)
-        return alpha
+    # compute l
+    l = (point.x - a[0] - a[2]*m)/(a[1] + a[3]*m)
 
-    def beta_2(a,b,c,d,e,f,g,h):
-        beta = -((-b*e + a*f + d*g - c*h + np.sqrt(
-            -4*(c*e - a*g)*(d*f - b*h) + (
-                b*e - a*f + d*g - c*h
-            )**2
-        ))/(2*c*f - 2*b*g))
-        return beta
+    return l, m
 
-    def calc_alpha_beta_1(a,b,c,d,e,f,g,h):
-        alpha = alpha_1(a,b,c,d,e,f,g,h)
-        if(alpha >= 0 and alpha <= 1):
-            beta = beta_1(a,b,c,d,e,f,g,h)
-            if(beta >= 0 or beta <= 1):
-                return (alpha, beta)
-        return None
 
-    def calc_alpha_beta_2(a,b,c,d,e,f,g,h):
-        alpha = alpha_2(a,b,c,d,e,f,g,h)
-        if(alpha >= 0 and alpha <= 1):
-            beta = beta_2(a,b,c,d,e,f,g,h)
-            if(beta >= 0 or beta <= 1):
-                return (alpha, beta)
-        return None
-
-    coeff = calc_alpha_beta_1(a,b,c,d,e,f,g,h)
-    if(coeff):
-        return coeff
-    else:
-        coeff = calc_alpha_beta_2(a,b,c,d,e,f,g,h)
-        if(coeff):
-            return coeff
-        else:
-            return None
-
-def interpolate_value(x, y, vertices, vertices_connect):
+def interpolate_value(x, y, vertices, vertices_connect, values):
+    # interpolate value from vertices to the inside point
 
     point = Point(x, y)
 
@@ -147,38 +94,12 @@ def interpolate_value(x, y, vertices, vertices_connect):
 
     if(n_cell):
 
-        vertices_x = np.empty(4)
-        vertices_y = np.empty(4)
-        vertices_coord = cell.exterior.coords
-        for i in range(4):
-            vertices_x[i] = vertices_coord[i][0]
-            vertices_y[i] = vertices_coord[i][1]
+        l, m = calc_normalized_coord(cell, point)
 
-        A = np.array([[1, 0, 0, 0],
-                      [1, 1, 0, 0],
-                      [1, 1, 1, 1],
-                      [1, 0, 1, 0]])
-        AI = np.linalg.inv(A)
-
-        a = AI.dot(vertices_x)
-        b = AI.dot(vertices_y)
-
-        # quadratic equation coeffs, aa*mm^2+bb*m+cc=0
-        aa = a[3]*b[2] - a[2]*b[3]
-        bb = a[3]*b[0] - a[0]*b[3] + a[1]*b[2] - a[2]*b[1] + point.x*b[3] - point.y*a[3]
-        cc = a[1]*b[0] - a[0]*b[1] + point.x*b[1] - point.y*a[1]
-
-        # compute m = (-b+sqrt(b^2-4ac))/(2a)
-        det = np.sqrt(bb*bb - 4*aa*cc)
-        m = (-bb - det)/(2*aa)
-
-        # compute l
-        l = (point.x - a[0] - a[2]*m)/(a[1] + a[3]*m)
-
-        p1 = vel_z[vertices_connect[n_cell,0]]
-        p2 = vel_z[vertices_connect[n_cell,1]]
-        p3 = vel_z[vertices_connect[n_cell,2]]
-        p4 = vel_z[vertices_connect[n_cell,3]]
+        p1 = values[vertices_connect[n_cell,0]]
+        p2 = values[vertices_connect[n_cell,1]]
+        p3 = values[vertices_connect[n_cell,2]]
+        p4 = values[vertices_connect[n_cell,3]]
 
         value = (1 - m)*(
             (1 - l)*p1 + l*p2
@@ -191,29 +112,35 @@ def interpolate_value(x, y, vertices, vertices_connect):
     return 0
 
 
-# value = interpolate_value(0.5, -0.2, vertices, vertices_connect)
-# print(value)
+if __name__ == '__main__':
 
-# Define funciton to create MFSim-like grid
-# space = np.arange(-0.5,0.5001,0.025)
-space = np.arange(-0.5,0.5001,0.003125)
-X,Y = np.meshgrid(space, space)
+    vertices, vertices_connect, vel_z = read_cfdpost_data('profile.axdt', 1080)
 
-space_centroid = np.empty(len(space)-1)
-for i in range(1,len(space)):
-    space_centroid[i-1] = space[i-1] + (space[i]-space[i-1])/2
-X_c,Y_c = np.meshgrid(space_centroid, space_centroid)
+    vertices[:,0] -= 3.464  # center x values at 0
 
-Z = np.empty((len(space_centroid),len(space_centroid)))
-for i in range(len(space_centroid)):
-    for j in range(len(space_centroid)):
-        Z[i,j] = interpolate_value(X_c[i,j], Y_c[i,j], vertices, vertices_connect)
+    # value = interpolate_value(0.5, -0.2, vertices, vertices_connect)
+    # print(value)
 
-circle = plt.Circle((0, 0), 0.33, color='white', fill=False, lw=3)
-fig, ax = plt.subplots(figsize=(7,6))
-c = ax.pcolor(X_c, Y_c, -Z,
-            cmap='jet',
-            edgecolors='k',
-            linewidths=1)
-ax.add_patch(circle)
-fig.colorbar(c)
+    # Define funciton to create MFSim-like grid
+    space = np.arange(-0.5,0.5001,0.025)
+    # space = np.arange(-0.5,0.5001,0.003125)
+    X,Y = np.meshgrid(space, space)
+
+    space_centroid = np.empty(len(space)-1)
+    for i in range(1,len(space)):
+        space_centroid[i-1] = space[i-1] + (space[i]-space[i-1])/2
+    X_c,Y_c = np.meshgrid(space_centroid, space_centroid)
+
+    Z = np.empty((len(space_centroid),len(space_centroid)))
+    for i in range(len(space_centroid)):
+        for j in range(len(space_centroid)):
+            Z[i,j] = interpolate_value(X_c[i,j], Y_c[i,j], vertices, vertices_connect, vel_z)
+
+    circle = plt.Circle((0, 0), 0.33, color='white', fill=False, lw=3)
+    fig, ax = plt.subplots(figsize=(7,6))
+    c = ax.pcolor(X_c, Y_c, -Z,
+                cmap='jet',
+                edgecolors='k',
+                linewidths=1)
+    ax.add_patch(circle)
+    fig.colorbar(c)
