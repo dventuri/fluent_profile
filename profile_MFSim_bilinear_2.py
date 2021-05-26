@@ -131,10 +131,16 @@ if __name__ == '__main__':
         space_centroid[i-1] = space[i-1] + (space[i]-space[i-1])/2
     X_c,Y_c = np.meshgrid(space_centroid, space_centroid)
 
+    percent = 0
+    n = 0
     Z = np.empty((len(space_centroid),len(space_centroid)))
+    total = len(Z)**2
     for i in range(len(space_centroid)):
         for j in range(len(space_centroid)):
             Z[i,j] = interpolate_value(X_c[i,j], Y_c[i,j], vertices, vertices_connect, vel_z)
+            n += 1
+            percent = n/total*100
+            print(percent,"%")
 
     circle = plt.Circle((0, 0), 0.33, color='white', fill=False, lw=3)
     fig, ax = plt.subplots(figsize=(7,6))
