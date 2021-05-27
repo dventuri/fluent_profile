@@ -1,9 +1,12 @@
 # From https://www.particleincell.com/2012/quad-interpolation
 
+import time
+from atpbar.main import atpbar
 import numpy as np
 import matplotlib.pyplot as plt
 from shapely.geometry import Point
 from shapely.geometry.polygon import Polygon
+from atpbar import atpbar
 
 
 def read_cfdpost_data(filename, rows):
@@ -114,38 +117,71 @@ def interpolate_value(x, y, vertices, vertices_connect, values):
 
 if __name__ == '__main__':
 
+    start_time = time.time()
+
     vertices, vertices_connect, vel_z = read_cfdpost_data('profile.axdt', 1080)
 
-    vertices[:,0] -= 3.464  # center x values at 0
+    r = 0.64140/2
+    r2 = r**2
 
-    # create MFSim-like grid (vertices)
-    space = np.arange(-0.5,0.5001,0.025)
-    X,Y = np.meshgrid(space, space)
+    n_cells = 40
+    L = 1
+    dx = dy = L/n_cells
 
-    # define centroids
-    space_centroid = np.empty(len(space)-1)
-    for i in range(1,len(space)):
-        space_centroid[i-1] = space[i-1] + (space[i]-space[i-1])/2
-    X_c,Y_c = np.meshgrid(space_centroid, space_centroid)
+    # center values at (L/2, L/2)
+    vertices[:,0] -= (3.464 - L/2)
+    vertices[:,1] += 0.5
 
-    # interpolate
-    percent = 0
-    n = 0
-    Z = np.empty((len(space_centroid),len(space_centroid)))
-    total = len(Z)**2
-    for i in range(len(space_centroid)):
-        for j in range(len(space_centroid)):
-            Z[i,j] = interpolate_value(X_c[i,j], Y_c[i,j], vertices, vertices_connect, vel_z)
-            n += 1
-            percent = n/total*100
-            print(percent,"%")
+    cell_range = range(1,n_cells+1)
+    with open('w.txt', 'w') as myfile:
+        for i in atpbar(cell_range):
+            for j in cell_range:
+                x_c = i*dx
+                y_c = j*dy
 
-    # plot
-    circle = plt.Circle((0, 0), 0.33, color='white', fill=False, lw=3)
-    fig, ax = plt.subplots(figsize=(7,6))
-    c = ax.pcolor(X, Y, -Z,
-                cmap='jet',
-                edgecolors='k',
-                linewidths=1)
-    ax.add_patch(circle)
-    fig.colorbar(c)
+                d2 = (x_c-L/2)**2 + (y_c-L/2)**2
+                if(d2 < (r2*1.05)):
+                    value = interpolate_value(x_c, y_c,
+                                            vertices,
+                                            vertices_connect,
+                                            vel_z)
+                else:
+                    value = 0
+
+                myfile.write("{}, {}, {}\n".format(
+                    i, j, value
+                ))
+
+    print("--- %s seconds ---" % (time.time() - start_time))
+
+    # # create MFSim-like grid (vertices)
+    # space = np.arange(-0.5,0.5001,0.025)
+    # X,Y = np.meshgrid(space, space)
+
+    # # define centroids
+    # space_centroid = np.empty(len(space)-1)
+    # for i in range(1,len(space)):
+    #     space_centroid[i-1] = space[i-1] + (space[i]-space[i-1])/2
+    # X_c,Y_c = np.meshgrid(space_centroid, space_centroid)
+
+    # # interpolate
+    # percent = 0
+    # n = 0
+    # Z = np.empty((len(space_centroid),len(space_centroid)))
+    # total = len(Z)**2
+    # for i in range(len(space_centroid)):
+    #     for j in range(len(space_centroid)):
+    #         Z[i,j] = interpolate_value(X_c[i,j], Y_c[i,j], vertices, vertices_connect, vel_z)
+    #         n += 1
+    #         percent = n/total*100
+    #         print(percent,"%")
+
+    # # plot
+    # circle = plt.Circle((0, 0), 0.33, color='white', fill=False, lw=3)
+    # fig, ax = plt.subplots(figsize=(7,6))
+    # c = ax.pcolor(X, Y, -Z,
+    #             cmap='jet',
+    #             edgecolors='k',
+    #             linewidths=1)
+    # ax.add_patch(circle)
+    # fig.colorbar(c)
