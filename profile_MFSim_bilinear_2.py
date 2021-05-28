@@ -117,42 +117,55 @@ def interpolate_value(x, y, vertices, vertices_connect, values):
 
 if __name__ == '__main__':
 
-    start_time = time.time()
-
-    vertices, vertices_connect, vel_z = read_cfdpost_data('profile.axdt', 1080)
-
+    # geometric definitions
     r = 0.64140/2
     r2 = r**2
+    Ly = Lz = 1
 
-    n_cells = 40
-    L = 1
-    dx = dy = L/n_cells
+    # MFSim mesh definitions
+    n_cells_lbot = 40
+    mesh_levels = 6
+
+    # read cfd-post data
+    vertices, vertices_connect, vel_z = read_cfdpost_data('profile.axdt', 1080)
 
     # center values at (L/2, L/2)
-    vertices[:,0] -= (3.464 - L/2)
+    vertices[:,0] -= (3.464 - Ly/2)
     vertices[:,1] += 0.5
 
-    cell_range = range(1,n_cells+1)
-    with open('w.txt', 'w') as myfile:
-        for i in atpbar(cell_range):
-            for j in cell_range:
-                x_c = i*dx
-                y_c = j*dy
+    ### Interpolate values from fluent mesh to MFSim mesh ###
 
-                d2 = (x_c-L/2)**2 + (y_c-L/2)**2
-                if(d2 < (r2*1.05)):
-                    value = interpolate_value(x_c, y_c,
-                                            vertices,
-                                            vertices_connect,
-                                            vel_z)
-                else:
-                    value = 0
+    # for each variable
+    var = [vel_x, vel_y, vel_z]
 
-                myfile.write("{}, {}, {}\n".format(
-                    i, j, value
-                ))
+    # interpolate values for each mesh level
+    for lvl in range(mesh_levels):
+        start_time = time.time()
 
-    print("--- %s seconds ---" % (time.time() - start_time))
+        n_cells = n_cells_lbot*(2**(lvl))
+        dy = dz = Ly/n_cells[lvl]
+
+        cell_range = range(1,n_cells+1)
+        with open('u_'+lvl+1+'.txt', 'w') as myfile:
+            for j in atpbar(cell_range):
+                for k in cell_range:
+                    y_c = j*dy
+                    z_c = k*dz
+
+                    d2 = (y_c-Ly/2)**2 + (z_c-Lz/2)**2
+                    if(d2 < (r2*1.05)):
+                        value = interpolate_value(y_c, z_c,
+                                                  vertices,
+                                                  vertices_connect,
+                                                  vel_z)
+                    else:
+                        value = 0
+
+                    myfile.write("{}, {}, {}\n".format(
+                        j, k, value
+                    ))
+
+        print("--- %s seconds ---" % (time.time() - start_time))
 
     # # create MFSim-like grid (vertices)
     # space = np.arange(-0.5,0.5001,0.025)
@@ -185,3 +198,5 @@ if __name__ == '__main__':
     #             linewidths=1)
     # ax.add_patch(circle)
     # fig.colorbar(c)
+
+# TODO check mesh fluent vs cfd post
