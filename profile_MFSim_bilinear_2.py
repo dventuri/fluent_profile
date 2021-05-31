@@ -1,6 +1,5 @@
 # From https://www.particleincell.com/2012/quad-interpolation
 
-import time
 from atpbar.main import atpbar
 import numpy as np
 import matplotlib.pyplot as plt
@@ -9,26 +8,26 @@ from shapely.geometry.polygon import Polygon
 from atpbar import atpbar
 
 
-def read_cfdpost_data(filename, rows):
+def read_cfdpost_data(filename, number_of_lines, delimiter=',', skiprows=0):
     # Read CFD-Post vertex data as x and y points with connectivity info
     # Fluent raw data is at centroids but has no connectivity info
 
     vertices = np.loadtxt(filename,
-                          delimiter=',',
-                          skiprows=2,
-                          max_rows=rows,
-                          usecols=(0,1))
+                          delimiter=delimiter,
+                          skiprows=skiprows,
+                          max_rows=number_of_lines,
+                          usecols=(1,2))
 
     vel_z = np.loadtxt(filename,
-                       delimiter=',',
-                       skiprows=2,
-                       max_rows=1080,
-                       usecols=3)
+                       delimiter=delimiter,
+                       skiprows=skiprows,
+                       max_rows=number_of_lines,
+                       usecols=(3,4,5))
 
     vertices_connect = np.loadtxt(filename,
                                   dtype=int,
-                                  delimiter=',',
-                                  skiprows=rows+4)
+                                  delimiter=delimiter,
+                                  skiprows=number_of_lines+skiprows+2)
 
     return vertices, vertices_connect, vel_z
 
@@ -127,26 +126,33 @@ if __name__ == '__main__':
     mesh_levels = 6
 
     # read cfd-post data
-    vertices, vertices_connect, vel_z = read_cfdpost_data('profile.axdt', 1080)
+    vertices, vertices_connect, vel = read_cfdpost_data(
+        'profile_outlet_fluent_kwSST.csv',
+        1080,
+        delimiter=',',
+        skiprows=15
+    )
 
     # center values at (L/2, L/2)
-    vertices[:,0] -= (3.464 - Ly/2)
+    vertices[:,0] -= (3.464 - Ly/2) #TODO: Check x center
     vertices[:,1] += 0.5
 
     ### Interpolate values from fluent mesh to MFSim mesh ###
 
-    # for each variable
-    var = [vel_x, vel_y, vel_z]
+    # index 0,1,2 in vel are related to x,y,z directions
+    # however, they are translated to z,y,x into MFSim coordinates
 
-    # interpolate values for each mesh level
+    # for each mesh level
     for lvl in range(mesh_levels):
-        start_time = time.time()
 
         n_cells = n_cells_lbot*(2**(lvl))
-        dy = dz = Ly/n_cells[lvl]
+        dy = dz = Ly/n_cells
 
         cell_range = range(1,n_cells+1)
-        with open('u_'+lvl+1+'.txt', 'w') as myfile:
+
+        # u in MFSim is vel_z from fluent
+        # writing at the centroid of the cell
+        with open('u_'+str(lvl+1)+'.txt', 'w') as myfile:
             for j in atpbar(cell_range):
                 for k in cell_range:
                     y_c = j*dy
@@ -157,7 +163,7 @@ if __name__ == '__main__':
                         value = interpolate_value(y_c, z_c,
                                                   vertices,
                                                   vertices_connect,
-                                                  vel_z)
+                                                  vel[:,2])
                     else:
                         value = 0
 
@@ -165,7 +171,47 @@ if __name__ == '__main__':
                         j, k, value
                     ))
 
-        print("--- %s seconds ---" % (time.time() - start_time))
+        # v in MFSim is vel_y from fluent
+        # writing at the west face of the cell
+        with open('v_'+str(lvl+1)+'.txt', 'w') as myfile:
+            for j in atpbar(cell_range):
+                for k in cell_range:
+                    y_f = (j-0.5)*dy
+                    z_c = k*dz
+
+                    d2 = (y_f-Ly/2)**2 + (z_c-Lz/2)**2
+                    if(d2 < (r2*1.05)):
+                        value = interpolate_value(y_f, z_c,
+                                                  vertices,
+                                                  vertices_connect,
+                                                  vel[:,1])
+                    else:
+                        value = 0
+
+                    myfile.write("{}, {}, {}\n".format(
+                        j, k, value
+                    ))
+
+        # w in MFSim is vel_x from fluent
+        # writing at the bot face of the cell
+        with open('w_'+str(lvl+1)+'.txt', 'w') as myfile:
+            for j in atpbar(cell_range):
+                for k in cell_range:
+                    y_c = j*dy
+                    z_f = (k-0.5)*dz
+
+                    d2 = (y_c-Ly/2)**2 + (z_f-Lz/2)**2
+                    if(d2 < (r2*1.05)):
+                        value = interpolate_value(y_c, z_f,
+                                                  vertices,
+                                                  vertices_connect,
+                                                  vel[:,0])
+                    else:
+                        value = 0
+
+                    myfile.write("{}, {}, {}\n".format(
+                        j, k, value
+                    ))
 
     # # create MFSim-like grid (vertices)
     # space = np.arange(-0.5,0.5001,0.025)
@@ -198,5 +244,3 @@ if __name__ == '__main__':
     #             linewidths=1)
     # ax.add_patch(circle)
     # fig.colorbar(c)
-
-# TODO check mesh fluent vs cfd post
