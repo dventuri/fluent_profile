@@ -86,13 +86,7 @@ def calc_normalized_coord(cell, point):
 
     return l, m
 
-
-def interpolate_value(x, y, vertices, vertices_connect, values):
-    # interpolate value from vertices to the inside point
-
-    point = Point(x, y)
-
-    n_cell, cell = find_cell(point, vertices, vertices_connect)
+def calculate_value(n_cell, cell, point, vertices_connect, values):
 
     if(n_cell):
 
@@ -114,6 +108,25 @@ def interpolate_value(x, y, vertices, vertices_connect, values):
     return 0
 
 
+def interpolate_value(x, y, vertices, vertices_connect, values):
+    # interpolate value from vertices to the inside point
+
+    point = Point(x, y)
+
+    n_cell, cell = find_cell(point, vertices, vertices_connect)
+
+    ndim = values.shape[1]
+
+    if(ndim > 1):
+        value = np.empty(ndim)
+        for n in range(ndim):
+            value[n] = calculate_value(n_cell, cell, point, vertices_connect, values[:,n])
+    else:
+        value = calculate_value(n_cell, cell, point, vertices_connect, values)
+
+    return value
+
+
 if __name__ == '__main__':
 
     # geometric definitions
@@ -122,8 +135,8 @@ if __name__ == '__main__':
     Ly = Lz = 1
 
     # MFSim mesh definitions
-    n_cells_lbot = 40
-    mesh_levels = 6
+    n_cells = 5120
+    dy = dz = Ly/n_cells
 
     # read cfd-post data
     vertices, vertices_connect, vel = read_cfdpost_data(
@@ -142,76 +155,34 @@ if __name__ == '__main__':
     # index 0,1,2 in vel are related to x,y,z directions
     # however, they are translated to z,y,x into MFSim coordinates
 
-    # for each mesh level
-    for lvl in range(mesh_levels):
+    cell_range = range(1,n_cells+1)
 
-        n_cells = n_cells_lbot*(2**(lvl))
-        dy = dz = Ly/n_cells
+    # writing at the centroid of the cell
+    values = np.empty((n_cells*n_cells,5))
+    i = 0
+    for j in atpbar(cell_range):
+        for k in cell_range:
+            y_c = j*dy
+            z_c = k*dz
+            line = (j-1)*n_cells + k
+            i += 1
 
-        cell_range = range(1,n_cells+1)
+            if (i != line):
+                print("ERROR I != LINE")
 
-        # u in MFSim is vel_z from fluent
-        # writing at the centroid of the cell
-        with open('u_'+str(lvl+1)+'.txt', 'w') as myfile:
-            for j in atpbar(cell_range):
-                for k in cell_range:
-                    y_c = j*dy
-                    z_c = k*dz
+            values[i-1,0] = y_c
+            values[i-1,1] = z_c
 
-                    d2 = (y_c-Ly/2)**2 + (z_c-Lz/2)**2
-                    if(d2 < (r2*1.05)):
-                        value = interpolate_value(y_c, z_c,
-                                                  vertices,
-                                                  vertices_connect,
-                                                  vel[:,2])
-                    else:
-                        value = 0
+            d2 = (y_c-Ly/2)**2 + (z_c-Lz/2)**2
+            if(d2 < (r2*1.05)):
+                values[i-1,2:] = interpolate_value(y_c, z_c,
+                                                   vertices,
+                                                   vertices_connect,
+                                                   vel)
+            else:
+                values[i-1,2:] = 0
 
-                    myfile.write("{}, {}, {}\n".format(
-                        j, k, value
-                    ))
-
-        # v in MFSim is vel_y from fluent
-        # writing at the west face of the cell
-        with open('v_'+str(lvl+1)+'.txt', 'w') as myfile:
-            for j in atpbar(cell_range):
-                for k in cell_range:
-                    y_f = (j-0.5)*dy
-                    z_c = k*dz
-
-                    d2 = (y_f-Ly/2)**2 + (z_c-Lz/2)**2
-                    if(d2 < (r2*1.05)):
-                        value = interpolate_value(y_f, z_c,
-                                                  vertices,
-                                                  vertices_connect,
-                                                  vel[:,1])
-                    else:
-                        value = 0
-
-                    myfile.write("{}, {}, {}\n".format(
-                        j, k, value
-                    ))
-
-        # w in MFSim is vel_x from fluent
-        # writing at the bot face of the cell
-        with open('w_'+str(lvl+1)+'.txt', 'w') as myfile:
-            for j in atpbar(cell_range):
-                for k in cell_range:
-                    y_c = j*dy
-                    z_f = (k-0.5)*dz
-
-                    d2 = (y_c-Ly/2)**2 + (z_f-Lz/2)**2
-                    if(d2 < (r2*1.05)):
-                        value = interpolate_value(y_c, z_f,
-                                                  vertices,
-                                                  vertices_connect,
-                                                  vel[:,0])
-                    else:
-                        value = 0
-
-                    myfile.write("{}, {}, {}\n".format(
-                        j, k, value
-                    ))
+    np.savetxt("vel.txt", values)
 
     # # create MFSim-like grid (vertices)
     # space = np.arange(-0.5,0.5001,0.025)
