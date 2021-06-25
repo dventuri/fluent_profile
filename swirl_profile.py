@@ -18,12 +18,12 @@ def z_vel_MFSim(y, z, aux=None):
 def y_vel(y, z, aux=None):
     if(not aux):
         aux = func_R(y,z)
-    return -aux*150000*np.sin(np.pi*z)*np.cos(np.pi*y)
+    return -aux*150000*2*np.sin(np.pi*z)*np.cos(np.pi*y)
 
 def z_vel(y, z, aux=None):
     if(not aux):
         aux = func_R(y,z)
-    return aux*150000*np.sin(np.pi*y)*np.cos(np.pi*z)
+    return aux*150000*2*np.sin(np.pi*y)*np.cos(np.pi*z)
 
 
 r_jet = 0.0055
@@ -67,6 +67,13 @@ ax.set_xlim(-r_jet,+r_jet)
 ax.set_ylim(-r_jet,+r_jet)
 fig.colorbar(strm.lines)
 
+dvy_dz = np.gradient(vel_y_MFSim, space, axis=0, edge_order=2)
+dvz_dy = np.gradient(vel_z_MFSim, space, axis=1, edge_order=2)
+vort = 0.5*(dvz_dy-dvy_dz)
+fig, ax = plt.subplots()
+plot = ax.contourf(yy, zz, vort)
+fig.colorbar(plot)
+
 # MFSim - y and z velocities without aux function
 vel_y_MFSim = y_vel_MFSim(yy,zz,1)
 vel_z_MFSim = z_vel_MFSim(yy,zz,1)
@@ -104,7 +111,7 @@ fig.colorbar(plot)
 max_vel = np.abs(y_vel(0,0.0055))
 vel_mag = np.sqrt(vel_y**2 + vel_z**2)
 fig, ax = plt.subplots()
-strm = ax.streamplot(yy, zz, vel_y, vel_z,
+strm = ax.streamplot(yy, zz, -vel_y, -vel_z,
                     density=1,
                     color=vel_mag,
                     cmap='viridis',
@@ -114,6 +121,13 @@ strm = ax.streamplot(yy, zz, vel_y, vel_z,
 ax.set_xlim(-r_jet,+r_jet)
 ax.set_ylim(-r_jet,+r_jet)
 fig.colorbar(strm.lines)
+
+dvy_dz = np.gradient(-vel_y, space, axis=0, edge_order=2)
+dvz_dy = np.gradient(-vel_z, space, axis=1, edge_order=2)
+vort = 0.5*(dvz_dy-dvy_dz)
+fig, ax = plt.subplots()
+plot = ax.contourf(yy, zz, vort)
+fig.colorbar(plot)
 
 # TEST - y and z velocities without aux function
 vel_y = y_vel(yy,zz,aux=1)
