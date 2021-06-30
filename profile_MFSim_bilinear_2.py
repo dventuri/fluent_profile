@@ -22,7 +22,7 @@ def read_cfdpost_data(filename, number_of_lines, delimiter=',', skiprows=0):
                        delimiter=delimiter,
                        skiprows=skiprows,
                        max_rows=number_of_lines,
-                       usecols=(3,4,5))
+                       usecols=(4,5,6))
 
     vertices_connect = np.loadtxt(filename,
                                   dtype=int,
