@@ -93,6 +93,40 @@ fig, ax = plt.subplots()
 plot = ax.contourf(yy, zz, vort)
 fig.colorbar(plot)
 
+# MFSim - y and z velocities normalized
+angle = np.deg2rad(90)
+vel_y = y_vel_MFSim_norm(yy,zz,r_jet,angle,12.66)
+vel_z = z_vel_MFSim_norm(yy,zz,r_jet,angle,12.66)
+
+fig, ax = plt.subplots()
+plot = ax.contourf(yy, zz, vel_y)
+fig.colorbar(plot)
+
+fig, ax = plt.subplots()
+plot = ax.contourf(yy, zz, vel_z)
+fig.colorbar(plot)
+
+max_vel = y_vel_MFSim_norm(0,r_jet,r_jet,angle,12.66)
+vel_mag = np.sqrt(vel_y**2 + vel_z**2)
+fig, ax = plt.subplots()
+strm = ax.streamplot(yy, zz, vel_y, vel_z,
+                    density=1,
+                    color=vel_mag,
+                    cmap='viridis',
+                    norm=colors.Normalize(vmin=0,
+                                          vmax=max_vel)
+                    )
+ax.set_xlim(-r_jet,+r_jet)
+ax.set_ylim(-r_jet,+r_jet)
+fig.colorbar(strm.lines)
+
+dvy_dz = np.gradient(vel_y, space, axis=0, edge_order=2)
+dvz_dy = np.gradient(vel_z, space, axis=1, edge_order=2)
+vort = (dvz_dy-dvy_dz)
+fig, ax = plt.subplots()
+plot = ax.contourf(yy, zz, vort)
+fig.colorbar(plot)
+
 # MFSim - y and z velocities without aux function
 vel_y = y_vel_MFSim(yy,zz,150000,1)
 vel_z = z_vel_MFSim(yy,zz,150000,1)
