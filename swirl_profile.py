@@ -5,6 +5,10 @@ import matplotlib.colors as colors
 def func_R(y, z):
     return np.sqrt(y**2 + z**2)
 
+def func_R_norm(y, z, R):
+    aux = np.sqrt(y**2 + z**2)
+    return aux/R
+
 def y_vel_MFSim(y, z, C=150000, aux=None):
     if(not aux):
         aux = func_R(y,z)
@@ -14,6 +18,16 @@ def z_vel_MFSim(y, z, C=150000, aux=None):
     if(not aux):
         aux = func_R(y,z)
     return aux*2*np.pi*C*(-y)
+
+def y_vel_MFSim_norm(y, z, R, angle, axial_vel, aux=None):
+    if(not aux):
+        aux = func_R_norm(y,z,R)
+    return aux*np.tan(angle/2)*axial_vel*z/R
+
+def z_vel_MFSim_norm(y, z, R, angle, axial_vel, aux=None):
+    if(not aux):
+        aux = func_R_norm(y,z,R)
+    return aux*np.tan(angle/2)*axial_vel*(-y)/R
 
 def y_vel(y, z, C=150000, aux=None):
     if(not aux):
