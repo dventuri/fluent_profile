@@ -9,12 +9,12 @@ def func_R_norm(y, z, R):
     aux = np.sqrt(y**2 + z**2)
     return aux/R
 
-def y_vel_MFSim(y, z, C=150000, aux=None):
+def y_vel_MFSim(y, z, C=100000, aux=None):
     if(not aux):
         aux = func_R(y,z)
     return aux*2*np.pi*C*z
 
-def z_vel_MFSim(y, z, C=150000, aux=None):
+def z_vel_MFSim(y, z, C=100000, aux=None):
     if(not aux):
         aux = func_R(y,z)
     return aux*2*np.pi*C*(-y)
@@ -29,13 +29,13 @@ def z_vel_MFSim_norm(y, z, R, angle, axial_vel, aux=None):
         aux = func_R_norm(y,z,R)
     return aux*np.tan(angle/2)*axial_vel*(-y)/R
 
-def y_vel(y, z, C=150000, aux=None):
+def y_vel(y, z, C=100000, aux=None):
     if(not aux):
         aux = func_R(y,z)
     return aux*C*2*np.sin(np.pi*z)*np.cos(np.pi*y)
         #  aux*C*2*np.pi*z
 
-def z_vel(y, z, C=150000, aux=None):
+def z_vel(y, z, C=100000, aux=None):
     if(not aux):
         aux = func_R(y,z)
     return -aux*C*2*np.sin(np.pi*y)*np.cos(np.pi*z)
@@ -45,7 +45,7 @@ def z_vel(y, z, C=150000, aux=None):
 # sin(theta) = theta
 # cos(theta) = 1 - theta^2/2 = 1
 
-r_jet = 0.0055
+r_jet = 5.5499e-3
 
 start = -r_jet
 stop = r_jet
@@ -128,8 +128,8 @@ plot = ax.contourf(yy, zz, vort)
 fig.colorbar(plot)
 
 # MFSim - y and z velocities without aux function
-vel_y = y_vel_MFSim(yy,zz,150000,1)
-vel_z = z_vel_MFSim(yy,zz,150000,1)
+vel_y = y_vel_MFSim(yy,zz,100000,1)
+vel_z = z_vel_MFSim(yy,zz,100000,1)
 
 fig, ax = plt.subplots()
 plot = ax.contourf(yy, zz, vel_y)
@@ -139,7 +139,7 @@ fig, ax = plt.subplots()
 plot = ax.contourf(yy, zz, vel_z)
 fig.colorbar(plot)
 
-max_vel = y_vel_MFSim(0,r_jet,150000,1)
+max_vel = y_vel_MFSim(0,r_jet,100000,1)
 vel_mag = np.sqrt(vel_y**2 + vel_z**2)
 fig, ax = plt.subplots()
 strm = ax.streamplot(yy, zz, vel_y, vel_z,
@@ -194,8 +194,8 @@ plot = ax.contourf(yy, zz, vort)
 fig.colorbar(plot)
 
 # TEST - y and z velocities without aux function
-vel_y = y_vel(yy,zz,150000,1)
-vel_z = z_vel(yy,zz,150000,1)
+vel_y = y_vel(yy,zz,100000,1)
+vel_z = z_vel(yy,zz,100000,1)
 
 fig, ax = plt.subplots()
 plot = ax.contourf(yy, zz, vel_y)
@@ -205,7 +205,7 @@ fig, ax = plt.subplots()
 plot = ax.contourf(yy, zz, vel_z)
 fig.colorbar(plot)
 
-max_vel = y_vel(0,r_jet,150000,1)
+max_vel = y_vel(0,r_jet,100000,1)
 vel_mag = np.sqrt(vel_y**2 + vel_z**2)
 fig, ax = plt.subplots()
 strm = ax.streamplot(yy, zz, vel_y, vel_z,
@@ -226,12 +226,12 @@ fig, ax = plt.subplots()
 plot = ax.contourf(yy, zz, vort)
 fig.colorbar(plot)
 
-vort = -3*2*np.pi*150000*np.sqrt(yy**2+zz**2)
+vort = -3*2*np.pi*100000*np.sqrt(yy**2+zz**2)
 fig, ax = plt.subplots()
 plot = ax.contourf(yy, zz, vort)
 fig.colorbar(plot)
 
-vort = np.ones((len(space),len(space)))*(-2)*2*np.pi*150000
+vort = np.ones((len(space),len(space)))*(-2)*2*np.pi*100000
 fig, ax = plt.subplots()
 plot = ax.contourf(yy, zz, vort)
 fig.colorbar(plot)
