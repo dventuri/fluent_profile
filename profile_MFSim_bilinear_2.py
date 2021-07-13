@@ -150,36 +150,29 @@ if __name__ == '__main__':
     vertices[:,0] -= (3.464 - Ly/2) #TODO: Check x center
     vertices[:,1] += 0.5
 
-    ### Interpolate values from fluent mesh to MFSim mesh ###
-
-    # index 0,1,2 in vel are related to x,y,z directions
-    # however, they are translated to z,y,x into MFSim coordinates
-
-    cell_range = range(1,n_cells+1)
-
     # writing at the centroid of the cell
     values = np.empty((n_cells*n_cells,5))
+    cell_range = range(1,n_cells+1)
     i = 0
     for j in atpbar(cell_range):
         for k in cell_range:
             y_c = j*dy
             z_c = k*dz
             line = (j-1)*n_cells + k
-            i += 1
 
-            if (i != line):
-                print("ERROR I != LINE")
-
-            values[i-1,0] = y_c
-            values[i-1,1] = z_c
+            values[i,0] = y_c
+            values[i,1] = z_c
 
             d2 = (y_c-Ly/2)**2 + (z_c-Lz/2)**2
             if(d2 < (r2*1.05)):
-                values[i-1,2:] = interpolate_value(y_c, z_c,
-                                                   vertices,
-                                                   vertices_connect,
-                                                   vel)
+                values[i,2:] = interpolate_value(y_c, z_c,
+                                                 vertices,
+                                                 vertices_connect,
+                                                 vel)
             else:
-                values[i-1,2:] = 0
+                values[i,2:] = 0
+            
+            i += 1
 
+    # save data
     np.savetxt("vel.txt", values)
