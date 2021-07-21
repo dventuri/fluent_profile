@@ -132,10 +132,10 @@ if __name__ == '__main__':
     # geometric definitions
     r = 0.64140/2
     r2 = r**2
-    Ly = Lz = 1
+    Ly = Lz = 0.8
 
     # MFSim mesh definitions
-    n_cells = 5120
+    n_cells = 4096
     dy = dz = Ly/n_cells
 
     # read cfd-post data
@@ -148,7 +148,7 @@ if __name__ == '__main__':
 
     # center values at (L/2, L/2)
     vertices[:,0] -= (3.464 - Ly/2) #TODO: Check x center
-    vertices[:,1] += 0.5
+    vertices[:,1] += Lz/2
 
     # writing at the centroid of the cell
     values = np.empty((n_cells*n_cells,5))
