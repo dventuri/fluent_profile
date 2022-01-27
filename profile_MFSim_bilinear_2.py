@@ -2,7 +2,6 @@
 
 from atpbar.main import atpbar
 import numpy as np
-import matplotlib.pyplot as plt
 from shapely.geometry import Point
 from shapely.geometry.polygon import Polygon
 from atpbar import atpbar
