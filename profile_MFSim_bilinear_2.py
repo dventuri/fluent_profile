@@ -83,6 +83,7 @@ def calc_normalized_coord(cell, point):
     # If all attempts fail, use distance-based interpolation as fallback
     return distance_based_coord(vertices_x, vertices_y, point)
 
+
 def try_calculate_coord(vertices_x, vertices_y, point, AI, tol=1e-10):
     """
     Try to calculate normalized coordinates with error checking
@@ -92,7 +93,7 @@ def try_calculate_coord(vertices_x, vertices_y, point, AI, tol=1e-10):
         b = np.dot(AI, vertices_y)
 
         aa = a[3]*b[2] - a[2]*b[3]
-        
+
         # Check if quadratic coefficient is too small
         if abs(aa) < tol:
             return None, None
@@ -109,14 +110,14 @@ def try_calculate_coord(vertices_x, vertices_y, point, AI, tol=1e-10):
         det = np.sqrt(disc)
         for sign in [-1, 1]:
             m = (-bb + sign*det)/(2*aa)
-            
+
             # Check denominator for l calculation
             denom = (a[1] + a[3]*m)
             if abs(denom) < tol:
                 continue
-                
+
             l = (point.x - a[0] - a[2]*m)/denom
-            
+
             if 0 <= l <= 1 and 0 <= m <= 1:
                 return l, m
 
@@ -124,6 +125,7 @@ def try_calculate_coord(vertices_x, vertices_y, point, AI, tol=1e-10):
 
     except (RuntimeWarning, FloatingPointError):
         return None, None
+
 
 def distance_based_coord(vertices_x, vertices_y, point):
     """
@@ -133,24 +135,25 @@ def distance_based_coord(vertices_x, vertices_y, point):
     vertices = np.column_stack((vertices_x, vertices_y))
     point_coord = np.array([point.x, point.y])
     distances = np.linalg.norm(vertices - point_coord, axis=1)
-    
+
     # Avoid division by zero for points exactly at vertices
     eps = 1e-10
     distances = np.maximum(distances, eps)
-    
+
     # Calculate weights based on inverse distance
     weights = 1.0/distances
     weights = weights/np.sum(weights)
-    
+
     # Calculate normalized coordinates using weighted average
     l = weights[1] + weights[2]  # Right side contribution
     m = weights[2] + weights[3]  # Top side contribution
-    
+
     # Ensure coordinates are in [0,1]
     l = np.clip(l, 0, 1)
     m = np.clip(m, 0, 1)
-    
+
     return l, m
+
 
 def calculate_value(n_cell, cell, point, vertices_connect, values):
 
@@ -205,11 +208,11 @@ if __name__ == '__main__':
     dy = dz = Ly/n_cells
 
     print(f"Starting interpolation for {n_cells}x{n_cells} grid...")
-    
+
     # read cfd-post data
     print("Reading input data...")
     vertices, vertices_connect, vel = read_cfdpost_data(
-        'export3.csv',
+        'profile_outlet_recap30m.csv',
         1276,
         delimiter=',',
         skiprows=6
@@ -223,15 +226,15 @@ if __name__ == '__main__':
     values = np.empty((n_cells*n_cells,5))
     cell_range = range(1,n_cells+1)
     i = 0
-    
+
     total_cells = n_cells * n_cells
     last_percent = -1
     last_time_update = time.time()
     update_interval = 5  # segundos
-    
+
     print(f"\nStarting interpolation of {total_cells} points...")
     print("Progress: [", end='', flush=True)
-    
+
     for j in cell_range:
         for k in cell_range:
             y_c = j*dy
@@ -249,9 +252,9 @@ if __name__ == '__main__':
                                                  vel)
             else:
                 values[i,2:] = 0
-            
+
             i += 1
-            
+
             # Update progress
             current_time = time.time()
             if current_time - last_time_update >= update_interval:
@@ -259,18 +262,18 @@ if __name__ == '__main__':
                 elapsed_time = current_time - start_time
                 estimated_total = elapsed_time / (i / total_cells)
                 remaining_time = estimated_total - elapsed_time
-                
+
                 print(f"\rProgress: {percent_complete:.1f}% complete. "
                       f"Elapsed: {elapsed_time/60:.1f} min. "
                       f"Remaining: {remaining_time/60:.1f} min. "
                       f"Points processed: {i}/{total_cells}", end='', flush=True)
-                
+
                 last_time_update = current_time
 
     end_time = time.time()
     total_time = end_time - start_time
     print(f"\n\nInterpolation completed in {total_time/60:.1f} minutes")
-    
+
     print("Saving results...")
-    np.savetxt("teste.txt", values)
+    np.savetxt("vel.txt", values)
     print("Done!")
